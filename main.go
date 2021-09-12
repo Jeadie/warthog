@@ -14,10 +14,14 @@ func main() {
 	fmt.Println("listening to unix port 8000")
 	for {
 		conn, _ := ln.Accept()
-		fmt.Println("Recieved a connection")
+		fmt.Println("Received a connection")
 		c := make(chan int)
-		handler := clientHandler{delimeter: delimeter, channel: c, table: table}
-		handler.handle(bufio.NewReader(conn), bufio.NewWriter(conn))
+		handler := clientHandler{
+			delimeter: delimeter,
+			channel:   c,
+			table:     table,
+			reader:    bufio.NewReader(conn),
+			writer:    bufio.NewWriter(conn)}
+		go handler.handle()
 	}
-
 }

@@ -7,25 +7,22 @@ import (
 
 type clientHandler struct {
 	delimeter byte
-	channel chan int
-	table   SimpleDB
+	channel   chan int
+	table     SimpleDB
+	reader    *bufio.Reader
+	writer    *bufio.Writer
 }
 
-func (c *clientHandler) handle(reader *bufio.Reader, writer *bufio.Writer) {
-	continueRunning:= true
+func (c *clientHandler) handle() {
+	continueRunning := true
 	for continueRunning {
-		message, err := reader.ReadString(c.delimeter)
-		if err != nil {
-			continueRunning = false
-			break
-		}
+		message, _ := c.reader.ReadString(c.delimeter)
 		o, err := constructOperationRequest(message)
 		if err != nil {
-			continueRunning = false
 			break
 		}
 
-		var response string
+		response := ""
 		switch o.operationType {
 		case GET:
 			response, err = c.handleGet(o)
@@ -37,12 +34,10 @@ func (c *clientHandler) handle(reader *bufio.Reader, writer *bufio.Writer) {
 			fmt.Println("unsupported operation requested by client")
 		}
 		if err != nil {
-			fmt.Printf("operation %s failed\n", o.operationType.String())
-			continueRunning = false
+			fmt.Printf("operation %s failed. Error: %s\n", o.operationType.String(), err)
 		}
-		if _, err := writer.WriteString(response); len(response) > 0 && err != nil {
-			fmt.Println("error occurred sending response to client")
-			continueRunning = false
+		if len(response) > 0 {
+			c.handleResponse(response)
 		}
 	}
 	c.closeClientHandler()
@@ -61,4 +56,13 @@ func (c *clientHandler) handleGet(request OperationRequest) (string, error) {
 func (c *clientHandler) handleSet(request OperationRequest) error {
 	fmt.Println(request.operationType.String(), request.key, request.value)
 	return c.table.set(request.key, request.value)
+}
+
+func (c *clientHandler) handleResponse(response string) {
+	if _, err := c.writer.WriteString(response); err != nil {
+		fmt.Printf("error occurred sending response to client, %s\n", err)
+	}
+	if c.writer.Flush() != nil {
+		fmt.Println("Could not flush output to client")
+	}
 }

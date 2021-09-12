@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -38,16 +39,24 @@ type OperationRequest struct {
 }
 
 func constructOperationRequest(request string) (OperationRequest, error) {
-	requestParts := strings.SplitN(request, " ", 3)
+	requestParts := strings.Split(strings.TrimSuffix(request, "\n"), " ")
 	operationType, err := parse(requestParts[0])
 	if err != nil {
 		return OperationRequest{}, err
 	}
+
 	if requestParts[1] == "" {
 		return OperationRequest{}, errors.New("no key provided")
 	}
+
+	value := ""
+	if SET.String() == operationType.String() {
+		value = requestParts[2]
+	}
+
+	fmt.Println("Constructed a valid operation request")
 	return OperationRequest{
 		operationType: operationType,
 		key:           requestParts[1],
-		value:         requestParts[2]}, nil
+		value:         value}, nil
 }
