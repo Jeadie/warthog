@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 )
 
@@ -55,7 +56,10 @@ func (c *clientHandler) handleGet(request OperationRequest) (string, error) {
 
 func (c *clientHandler) handleSet(request OperationRequest) error {
 	fmt.Println(request.operationType.String(), request.key, request.value)
-	return c.table.set(request.key, request.value)
+	if c.table.set(request.key, request.value) {
+		return errors.New("failed to SET request into table")
+	}
+	return nil
 }
 
 func (c *clientHandler) handleResponse(response string) {

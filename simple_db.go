@@ -11,14 +11,14 @@ type SimpleDB struct {
 	currentSize int8
 }
 
-func (db SimpleDB) set(key string, value string) error {
+func (db SimpleDB) set(key string, value string) bool {
 	// if error, key not found -> set would breach capacity
 	if _, err := db.get(key); err == nil && (db.currentSize >= db.capacity) {
-		return errors.New("SimpleDB has reached capacity")
+		return false
 	}
 	db.table[key] = value
 	fmt.Printf("key |%s| -> %s\n", key, db.table[key])
-	return nil
+	return true
 }
 
 func (db SimpleDB) get(key string) (string, error) {
