@@ -1,29 +1,25 @@
-package main
+package server
 
 import (
 	"bufio"
 	"errors"
 	"fmt"
+	"warthog/pkg/db"
 )
 
-// TODO: Create manager for the backend database to Handle parallel calls.
-// Database interface for a variety of key-value stores.
-type Database interface {
-	Get(string) (string, error)
-	Set(string, string) bool
-}
+// TODO: Create manager for the backend database to Run parallel calls.
 
 // ClientHandler encapsulates fields needed for the server to communicate with a single client.
 type ClientHandler struct {
 	delimiter byte     // delimiter demarcating a single request from the client.
 	channel   chan int // Channel back to server accepting routine. Currently not used.
-	table     Database
+	table     db.Database
 	reader    *bufio.Reader // stream to read client communications from
 	writer    *bufio.Writer // stream to respond to client.
 }
 
-// Handle requests from a single client until they have sent a DONE OperationType.
-func (c *ClientHandler) Handle() {
+// Run requests from a single client until they have sent a DONE OperationType.
+func (c *ClientHandler) Run() {
 	continueRunning := true
 	for continueRunning {
 		message, _ := c.reader.ReadString(c.delimiter)
