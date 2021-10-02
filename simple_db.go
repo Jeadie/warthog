@@ -5,15 +5,18 @@ import (
 	"fmt"
 )
 
+// SimpleDB represents an in-memory key value database with a fixed number of entries,
 type SimpleDB struct {
 	table       map[string]string
 	capacity    int8
 	currentSize int8
 }
 
-func (db SimpleDB) set(key string, value string) bool {
-	// if error, key not found -> set would breach capacity
-	if _, err := db.get(key); err == nil && (db.currentSize >= db.capacity) {
+// Set the key-value association into the SimpleDB. Returns true if the key was stored
+// successfully, false otherwise.
+func (db *SimpleDB) Set(key string, value string) bool {
+	// if error, key not found -> Set would breach capacity
+	if _, err := db.Get(key); err == nil && (db.currentSize >= db.capacity) {
 		return false
 	}
 	db.table[key] = value
@@ -21,18 +24,20 @@ func (db SimpleDB) set(key string, value string) bool {
 	return true
 }
 
-func (db SimpleDB) get(key string) (string, error) {
+// Get the value associated with the key provided. Returns the stored value if present, otherwise
+// returns a non-nil error.
+func (db *SimpleDB) Get(key string) (string, error) {
 	if value, ok := db.table[key]; ok {
 		return value, nil
 	} else {
-		fmt.Printf("Getter on key |%s| failed with error\n", key)
 		return value, errors.New("key not found")
 	}
 }
 
-func ConstructSimpleDB(capacity int8) SimpleDB {
+// ConstructSimpleDB creates a SimpleDB object with required capacity.
+func ConstructSimpleDB(capacity int8) *SimpleDB {
 	table := make(map[string]string)
-	return SimpleDB{
+	return &SimpleDB{
 		table:       table,
 		capacity:    capacity,
 		currentSize: 0}

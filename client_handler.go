@@ -6,19 +6,28 @@ import (
 	"fmt"
 )
 
-type clientHandler struct {
-	delimeter byte
-	channel   chan int
-	table     SimpleDB
-	reader    *bufio.Reader
-	writer    *bufio.Writer
+// TODO: Create manager for the backend database to Handle parallel calls.
+// Database interface for a variety of key-value stores.
+type Database interface {
+	Get(string) (string, error)
+	Set(string, string) bool
 }
 
-func (c *clientHandler) handle() {
+// ClientHandler encapsulates fields needed for the server to communicate with a single client.
+type ClientHandler struct {
+	delimiter byte     // delimiter demarcating a single request from the client.
+	channel   chan int // Channel back to server accepting routine. Currently not used.
+	table     Database
+	reader    *bufio.Reader // stream to read client communications from
+	writer    *bufio.Writer // stream to respond to client.
+}
+
+// Handle requests from a single client until they have sent a DONE OperationType.
+func (c *ClientHandler) Handle() {
 	continueRunning := true
 	for continueRunning {
-		message, _ := c.reader.ReadString(c.delimeter)
-		o, err := constructOperationRequest(message)
+		message, _ := c.reader.ReadString(c.delimiter)
+		o, err := ConstructOperationRequest(message)
 		if err != nil {
 			break
 		}
@@ -44,25 +53,30 @@ func (c *clientHandler) handle() {
 	c.closeClientHandler()
 }
 
-func (c *clientHandler) closeClientHandler() {
-	c.channel <- 1
+// closeClientHandler wraps all logic in handling the end of communication with the client.
+func (c *ClientHandler) closeClientHandler() {
+	fmt.Println("Finished communication with client...")
 }
 
-func (c *clientHandler) handleGet(request OperationRequest) (string, error) {
-	fmt.Println(request.operationType.String(), request.key, request.value)
-	value, err := c.table.get(request.key)
+// handleGet performs a GET operation to the provided database. Returns an error if propagated from
+// the database and the value from the database.
+func (c *ClientHandler) handleGet(request OperationRequest) (string, error) {
+	value, err := c.table.Get(request.key)
 	return value, err
 }
 
-func (c *clientHandler) handleSet(request OperationRequest) error {
+// handleSet performs a SET operation to the provided database. Returns an error if propagated
+// from the database.
+func (c *ClientHandler) handleSet(request OperationRequest) error {
 	fmt.Println(request.operationType.String(), request.key, request.value)
-	if c.table.set(request.key, request.value) {
+	if ok := c.table.Set(request.key, request.value); !ok {
 		return errors.New("failed to SET request into table")
 	}
 	return nil
 }
 
-func (c *clientHandler) handleResponse(response string) {
+// handleResponse sends a response to the client.
+func (c *ClientHandler) handleResponse(response string) {
 	if _, err := c.writer.WriteString(response); err != nil {
 		fmt.Printf("error occurred sending response to client, %s\n", err)
 	}

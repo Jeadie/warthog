@@ -2,10 +2,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
+// OperationType defines the naming convention for database operations
 type OperationType int
 
 const (
@@ -15,12 +15,15 @@ const (
 	DONE
 )
 
+// String method for the OperationType
 func (ot OperationType) String() string {
 	// Defines the operation sent in a request payload.
 	return []string{"UNSUPPORTED", "GET", "SET", "DONE"}[ot]
 }
 
-func parse(rawOperationType string) (OperationType, error) {
+// Parse a raw operation string to a corresponding OperationType. Returns an error if the
+// rawOperationType is an invalid operation type.
+func Parse(rawOperationType string) (OperationType, error) {
 	switch rawOperationType {
 	case "GET":
 		return OperationType(1), nil
@@ -32,15 +35,22 @@ func parse(rawOperationType string) (OperationType, error) {
 	return OperationType(0), errors.New("Unknown operation type provided")
 }
 
+// OperationRequest defines the components of a request to the server.
 type OperationRequest struct {
 	operationType OperationType
 	key           string
 	value         string
 }
 
-func constructOperationRequest(request string) (OperationRequest, error) {
+// ConstructOperationRequest builds an OperationRequest struct from an unparsed client request. The
+// request is expected as a space delimetered strings with the first word being an OperationType.
+// If OperationType is GET or SET, then a second parameter is the key. If it is a SET, then the
+// third parameter is the value to associate with the key. Returns an error if an unsupported
+// OperationRequest is provided as the first parameter, or if the number and of parameters does not
+// reflect that required (as described above).
+func ConstructOperationRequest(request string) (OperationRequest, error) {
 	requestParts := strings.Split(strings.TrimSuffix(request, "\n"), " ")
-	operationType, err := parse(requestParts[0])
+	operationType, err := Parse(requestParts[0])
 	if err != nil {
 		return OperationRequest{}, err
 	}
@@ -49,12 +59,10 @@ func constructOperationRequest(request string) (OperationRequest, error) {
 		return OperationRequest{}, errors.New("no key provided")
 	}
 
-	value := ""
+	var value string
 	if SET.String() == operationType.String() {
 		value = requestParts[2]
 	}
-
-	fmt.Println("Constructed a valid operation request")
 	return OperationRequest{
 		operationType: operationType,
 		key:           requestParts[1],
