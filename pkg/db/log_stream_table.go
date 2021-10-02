@@ -8,7 +8,7 @@ import (
 // LogStreamTable is an append-only log database with in-memory index.
 type LogStreamTable struct {
 	inMemoryIndex   map[string]uint32
-	diskPartititons []LogFile
+	diskPartitions map[uint32]*LogFile
 	partitionSize   uint32
 }
 
@@ -34,7 +34,7 @@ func (table *LogStreamTable) Get(key string) (string, error) {
 
 	inFileIndex := index % table.partitionSize
 	fileIndex := index / table.partitionSize
-	file := table.diskPartititons[fileIndex]
+	file := table.diskPartitions[fileIndex]
 
 	return file.Get(inFileIndex)
 }
@@ -44,7 +44,7 @@ func ConstructLogStreamTable(chunk_size uint32) *LogStreamTable {
 	index := make(map[string]uint32)
 	table := LogStreamTable{
 		inMemoryIndex:   index,
-		diskPartititons: []LogFile{},
+		diskPartitions: make(map[uint32]*LogFile),
 		partitionSize:   chunk_size,
 	}
 	table.createNewPartition()
@@ -54,28 +54,22 @@ func ConstructLogStreamTable(chunk_size uint32) *LogStreamTable {
 // appendToEnd the key-value to the last log file. Returns true if the value was appended to disk
 // and index set, false otherwise.
 func (table *LogStreamTable) appendToEnd(key string, value string) bool {
-	fmt.Println("there are this many partitions")
-	fmt.Println(len(table.diskPartititons))
-
-	offset, err := table.diskPartititons[len(table.diskPartititons)-1].Set(value)
+	offset, err := table.diskPartitions[uint32(len(table.diskPartitions)-1)].Set(value)
 	if err != nil {
 		fmt.Printf("Failed to get disk partition offset for %s\n", key)
 		return false
 	}
-	indexValue := table.partitionSize*uint32(len(table.diskPartititons)-1) + offset
+	indexValue := table.partitionSize*uint32(len(table.diskPartitions)-1) + offset
 	table.inMemoryIndex[key] = indexValue
-	fmt.Printf("Setting key %s to index %d\n", key, offset)
 	return true
 }
 
 // createNewPartition constructs another log file to the list of partitions used.
 func (table *LogStreamTable) createNewPartition() {
-	fmt.Println("createNewPartition")
 	logFile, err := ConstructLogFile(table.partitionSize)
 	if err != nil {
 		fmt.Printf("could not create new partition %s\n", err)
 		return
 	}
-	table.diskPartititons = append(table.diskPartititons, *logFile)
-	return
+	table.diskPartitions[uint32(len(table.diskPartitions))] = logFile
 }
