@@ -87,3 +87,17 @@ func ConstructLogFile(maximumFileSize uint32) (*LogFile, error) {
 	}
 	return &result, nil
 }
+
+func (f *LogFile) getLogs() []string {
+	file, _ := os.Open(f.file.Name())
+	r := bufio.NewReader(file)
+	logs := make([]string, 1)
+
+	value, err := r.ReadString('\t')
+	for err != nil {
+		logs = append(logs, value)
+
+		value, err = r.ReadString('\t')
+	}
+	return logs
+}
