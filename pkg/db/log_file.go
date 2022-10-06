@@ -26,8 +26,7 @@ const defaultExtension = "db"
 // an error occurs, the position returned is 0.
 //
 func (f *LogFile) Set(value string) (uint32, error) {
-	stat, _ := f.file.Stat()
-	if (int64(len(value)) + stat.Size()) > int64(f.maximumFileSize) {
+	if (uint32(len(value)) + f.size()) > f.maximumFileSize {
 		return 0, errors.New("cannot add value, would exceed maximum file size")
 	}
 
@@ -36,13 +35,16 @@ func (f *LogFile) Set(value string) (uint32, error) {
 	if err != nil || addition != len(value) + 1 {
 		return 0, errors.New("error writing to file")
 	}
-	return uint32(stat.Size()), nil
+	return f.size(), nil
 }
 
 // Get returns the value stored at the given index, up until the delimiter \t, exclusive.
 // Returns an error the index could not be found in the file, or an error occurs reading from the
 // index, up until the delimiter.
 func (f *LogFile) Get(index uint32) (string, error) {
+	if f.size() == 0 {
+		return "", nil
+	}
 	if _, err := f.file.Seek(int64(index), 0); err != nil {
 		return "", errors.New(
 			fmt.Sprintf(
@@ -86,6 +88,11 @@ func ConstructLogFile(maximumFileSize uint32) (*LogFile, error) {
 		file:            temp,
 	}
 	return &result, nil
+}
+
+func (f *LogFile) size() uint32 {
+	stat, _ := f.file.Stat()
+	return uint32(stat.Size())
 }
 
 func (f *LogFile) getLogs() []string {

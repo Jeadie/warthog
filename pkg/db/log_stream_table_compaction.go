@@ -19,8 +19,6 @@ func (t *LogStreamTable) Compact() {
 	if lNew1 != nil {t.diskPartitions[k1] = lNew1}
 }
 
-
-
 // Returns keys to two LogFiles to compact together. Second key points to the newer LogFile.
 func (t *LogStreamTable) logFilesToCompact() (uint32, uint32) {
 	if len(t.diskPartitions) < 2 {
